@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Stundenplan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════
+   FORCE COLOURS & PATTERNS TO PRINT
+   ═══════════════════════════════════════════════════ */
+* {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  box-sizing: border-box;
+  margin: 0; padding: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   SCREEN
+   ═══════════════════════════════════════════════════ */
+body {
+  font-family: 'Outfit', sans-serif;
+  background: #EDEAE3;
+  padding: 24px;
+}
+
+.page {
+  width: 1060px;
+  margin: 0 auto;
+  background: #FAFAF7;
+  border-radius: 12px;
+  padding: 18px 20px 20px;
+  box-shadow: 0 6px 32px rgba(0,0,0,0.12);
+}
+
+/* Title */
+.title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+h1 {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1C1C2E;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.subtitle {
+  font-size: 9px;
+  color: #AAA;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+
+/* Grid */
+.grid-wrapper { display: flex; }
+
+.time-col {
+  width: 40px;
+  flex-shrink: 0;
+  position: relative;
+  margin-top: 32px;
+}
+.time-tick {
+  position: absolute;
+  right: 5px;
+  font-size: 7px;
+  color: #B8B3AC;
+  font-family: 'JetBrains Mono', monospace;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.days-wrapper { flex: 1; display: flex; gap: 4px; }
+.day-col      { flex: 1; display: flex; flex-direction: column; }
+
+.day-header {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #FAFAF7;
+  background: #1C1C2E;
+  border-radius: 5px;
+  margin-bottom: 3px;
+}
+
+.day-body { position: relative; }
+
+/* Blocks */
+.block {
+  position: absolute;
+  left: 0; right: 0;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2px 4px;
+  overflow: hidden;
+}
+.block-name {
+  font-weight: 700;
+  font-size: 8px;
+  line-height: 1.25;
+  position: relative;
+  z-index: 1;
+}
+.block-time {
+  font-size: 6.5px;
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0.75;
+  margin-top: 1px;
+  position: relative;
+  z-index: 1;
+}
+
+.gridline       { position: absolute; left:0; right:0; border-top: 1px solid rgba(0,0,0,0.05); pointer-events:none; }
+.gridline.major { border-top-color: rgba(0,0,0,0.10); }
+
+/* ═══════════════════════════════════════════════════
+   SUBJECT STYLES — colour BG + distinguishable pattern
+   Pattern remains visible when printed in greyscale.
+
+   Pattern inventory (no two subjects share the same):
+   andacht       = diag 45°  fine (5px pitch)
+   wochenstart   = horiz fine (5px)
+   nat           = vert fine (5px)
+   info          = crosshatch fine (6px)
+   math          = diag -45° fine (5px)
+   wahlfach      = dots large (7px grid)
+   rzg           = diag 45°  coarse (8px)
+   deutsch       = diag -45° coarse (8px)
+   franzoesisch  = dots small (5px grid)
+   weltanschauung= horiz coarse (9px)
+   englisch      = vert coarse (9px)
+   pause         = X-hatch fine (4px)
+   mittagspause  = X-hatch coarse (4px, darker)
+   ═══════════════════════════════════════════════════ */
+
+.c-andacht {
+  background-color: #FDF2C0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,.12) 0, rgba(0,0,0,.12) 1px,
+    transparent 1px, transparent 5px);
+  color: #6B4700; border: 1.5px solid #E6B800;
+}
+.c-wochenstart {
+  background-color: #D6EEFF;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,.10) 0, rgba(0,0,0,.10) 1px,
+    transparent 1px, transparent 5px);
+  color: #003F70; border: 1.5px solid #5AABEE;
+}
+.c-nat {
+  background-color: #CFEECE;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(0,0,0,.10) 0, rgba(0,0,0,.10) 1px,
+    transparent 1px, transparent 5px);
+  color: #1A5218; border: 1.5px solid #5BBD5A;
+}
+.c-info {
+  background-color: #B8EEF5;
+  background-image:
+    repeating-linear-gradient(0deg,  rgba(0,0,0,.09) 0, rgba(0,0,0,.09) 1px, transparent 1px, transparent 6px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.09) 0, rgba(0,0,0,.09) 1px, transparent 1px, transparent 6px);
+  color: #005058; border: 1.5px solid #2EC4D4;
+}
+.c-math {
+  background-color: #CCDEFF;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(0,0,0,.12) 0, rgba(0,0,0,.12) 1px,
+    transparent 1px, transparent 5px);
+  color: #0C3280; border: 1.5px solid #4E82D8;
+}
+.c-wahlfach {
+  background-color: #E8D4FA;
+  background-image: radial-gradient(circle, rgba(0,0,0,.22) 1.5px, transparent 1.5px);
+  background-size: 7px 7px;
+  color: #420070; border: 1.5px solid #A060E0;
+}
+.c-rzg {
+  background-color: #FFD2C0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,.12) 0, rgba(0,0,0,.12) 2px,
+    transparent 2px, transparent 8px);
+  color: #761400; border: 1.5px solid #F05830;
+}
+.c-deutsch {
+  background-color: #FFD2E2;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(0,0,0,.12) 0, rgba(0,0,0,.12) 2px,
+    transparent 2px, transparent 8px);
+  color: #76002E; border: 1.5px solid #E84880;
+}
+.c-franzoesisch {
+  background-color: #C8F5DF;
+  background-image: radial-gradient(circle, rgba(0,0,0,.20) 1px, transparent 1px);
+  background-size: 5px 5px;
+  color: #00472A; border: 1.5px solid #38C07A;
+}
+.c-weltanschauung {
+  background-color: #FFECC8;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,.12) 0, rgba(0,0,0,.12) 2px,
+    transparent 2px, transparent 9px);
+  color: #5E3000; border: 1.5px solid #F09010;
+}
+.c-englisch {
+  background-color: #D4ECFF;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(0,0,0,.12) 0, rgba(0,0,0,.12) 2px,
+    transparent 2px, transparent 9px);
+  color: #003468; border: 1.5px solid #48A8F0;
+}
+.c-pause {
+  background-color: #E2E0D8;
+  background-image:
+    repeating-linear-gradient( 45deg, rgba(0,0,0,.09) 0, rgba(0,0,0,.09) 1px, transparent 1px, transparent 4px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,.09) 0, rgba(0,0,0,.09) 1px, transparent 1px, transparent 4px);
+  color: #505050; border: 1.5px solid #B0ACA4;
+}
+.c-mittagspause {
+  background-color: #FFE0C8;
+  background-image:
+    repeating-linear-gradient( 45deg, rgba(0,0,0,.12) 0, rgba(0,0,0,.12) 1px, transparent 1px, transparent 4px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,.12) 0, rgba(0,0,0,.12) 1px, transparent 1px, transparent 4px);
+  color: #7A3200; border: 1.5px solid #F07840;
+}
+.c-placeholder {
+  background-color: #F0EDE8;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent, transparent 6px,
+    rgba(0,0,0,.07) 6px, rgba(0,0,0,.07) 12px);
+  color: #999; border: 1.5px dashed #C0BDB6; font-style: italic;
+}
+
+/* ═══════════════════════════════════════════════════
+   LEGEND
+   ═══════════════════════════════════════════════════ */
+.legend {
+  display: flex; flex-wrap: wrap; gap: 4px 12px;
+  margin-top: 10px; padding-top: 8px;
+  border-top: 1px solid #DDD9D0;
+  justify-content: center;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 7px; color: #444; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.legend-swatch {
+  width: 18px; height: 10px; border-radius: 2px; flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   PRINT
+   ═══════════════════════════════════════════════════ */
+@media print {
+  html, body {
+    background: white !important;
+    padding: 0 !important;
+  }
+  .page {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 4mm 5mm !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: white !important;
+  }
+  @page {
+    size: A4 landscape;
+    margin: 7mm;
+  }
+
+  /* Boost pattern contrast for greyscale printers */
+  .c-andacht        { background-image: repeating-linear-gradient(45deg,  rgba(0,0,0,.22) 0, rgba(0,0,0,.22) 1px, transparent 1px, transparent 5px) !important; }
+  .c-wochenstart    { background-image: repeating-linear-gradient(0deg,   rgba(0,0,0,.20) 0, rgba(0,0,0,.20) 1px, transparent 1px, transparent 5px) !important; }
+  .c-nat            { background-image: repeating-linear-gradient(90deg,  rgba(0,0,0,.20) 0, rgba(0,0,0,.20) 1px, transparent 1px, transparent 5px) !important; }
+  .c-info           { background-image: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0, rgba(0,0,0,.18) 1px, transparent 1px, transparent 6px), repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0, rgba(0,0,0,.18) 1px, transparent 1px, transparent 6px) !important; }
+  .c-math           { background-image: repeating-linear-gradient(-45deg, rgba(0,0,0,.22) 0, rgba(0,0,0,.22) 1px, transparent 1px, transparent 5px) !important; }
+  .c-wahlfach       { background-image: radial-gradient(circle, rgba(0,0,0,.32) 1.5px, transparent 1.5px) !important; background-size: 7px 7px !important; }
+  .c-rzg            { background-image: repeating-linear-gradient(45deg,  rgba(0,0,0,.22) 0, rgba(0,0,0,.22) 2px, transparent 2px, transparent 8px) !important; }
+  .c-deutsch        { background-image: repeating-linear-gradient(-45deg, rgba(0,0,0,.22) 0, rgba(0,0,0,.22) 2px, transparent 2px, transparent 8px) !important; }
+  .c-franzoesisch   { background-image: radial-gradient(circle, rgba(0,0,0,.30) 1px, transparent 1px) !important; background-size: 5px 5px !important; }
+  .c-weltanschauung { background-image: repeating-linear-gradient(0deg,   rgba(0,0,0,.22) 0, rgba(0,0,0,.22) 2px, transparent 2px, transparent 9px) !important; }
+  .c-englisch       { background-image: repeating-linear-gradient(90deg,  rgba(0,0,0,.22) 0, rgba(0,0,0,.22) 2px, transparent 2px, transparent 9px) !important; }
+  .c-pause          { background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.18) 0, rgba(0,0,0,.18) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(-45deg, rgba(0,0,0,.18) 0, rgba(0,0,0,.18) 1px, transparent 1px, transparent 4px) !important; }
+  .c-mittagspause   { background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.22) 0, rgba(0,0,0,.22) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(-45deg, rgba(0,0,0,.22) 0, rgba(0,0,0,.22) 1px, transparent 1px, transparent 4px) !important; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="title-row">
+    <h1>Stundenplan</h1>
+    <span class="subtitle">Schuljahr — Klasse</span>
+  </div>
+  <div id="schedule"></div>
+  <div class="legend" id="legend"></div>
+</div>
+
+<script>
+const PX_PER_MIN = 1.52;
+const DAY_START  = 8 * 60;
+const DAY_END    = 15 * 60 + 10;
+const TOTAL_H    = (DAY_END - DAY_START) * PX_PER_MIN;
+
+function toMin(s)       { const [h,m]=s.split(':').map(Number); return h*60+m; }
+function topPx(s)       { return (toMin(s) - DAY_START) * PX_PER_MIN; }
+function heightPx(s,e)  { return (toMin(e) - toMin(s))  * PX_PER_MIN; }
+
+const days = [
+  { name:'Montag', blocks:[
+    { s:'8:00',  e:'8:15',  label:'Andacht',          cls:'c-andacht' },
+    { s:'8:15',  e:'8:55',  label:'Wochenstart',      cls:'c-wochenstart' },
+    { s:'9:00',  e:'10:20', label:'Natur & Technik',  cls:'c-nat' },
+    { s:'10:20', e:'10:35', label:'Grosse Pause',     cls:'c-pause' },
+    { s:'10:35', e:'11:55', label:'NuT / Informatik', cls:'c-info' },
+    { s:'11:55', e:'12:20', label:'Mittagessen',      cls:'c-mittagspause' },
+    { s:'12:20', e:'13:10', label:'Mathematik',       cls:'c-math' },
+    { s:'13:10', e:'15:10', label:'Wahlfach',         cls:'c-wahlfach' },
+  ]},
+  { name:'Dienstag', blocks:[
+    { s:'8:40',  e:'8:55',  label:'Andacht',          cls:'c-andacht' },
+    { s:'8:55',  e:'10:20', label:'RZG',              cls:'c-rzg' },
+    { s:'10:20', e:'10:35', label:'Grosse Pause',     cls:'c-pause' },
+    { s:'10:35', e:'12:35', label:'RZG / Deutsch',    cls:'c-deutsch' },
+    { s:'12:35', e:'13:00', label:'Mittagspause',     cls:'c-mittagspause' },
+    { s:'13:00', e:'15:00', label:'Wahlfach',         cls:'c-wahlfach' },
+  ]},
+  { name:'Mittwoch', blocks:[
+    { s:'8:00',  e:'8:15',  label:'Andacht',          cls:'c-andacht' },
+    { s:'8:15',  e:'8:55',  label:'Französisch',      cls:'c-franzoesisch' },
+    { s:'9:00',  e:'10:20', label:'Mathematik',       cls:'c-math' },
+    { s:'10:20', e:'10:35', label:'Grosse Pause',     cls:'c-pause' },
+    { s:'10:35', e:'11:55', label:'Weltanschauung',   cls:'c-weltanschauung' },
+  ]},
+  { name:'Donnerstag', blocks:[
+    { s:'8:00', e:'15:10', label:'Wie besprochen\n(unverändert)', cls:'c-placeholder', ph:true },
+  ]},
+  { name:'Freitag', blocks:[
+    { s:'8:00',  e:'8:15',  label:'Andacht',          cls:'c-andacht' },
+    { s:'8:15',  e:'9:35',  label:'Englisch',         cls:'c-englisch' },
+    { s:'9:35',  e:'10:20', label:'Mathematik',       cls:'c-math' },
+    { s:'10:20', e:'10:35', label:'Grosse Pause',     cls:'c-pause' },
+    { s:'10:35', e:'11:55', label:'Deutsch',          cls:'c-deutsch' },
+  ]},
+];
+
+const ticks = [];
+for (let m = DAY_START; m <= DAY_END; m += 15)
+  ticks.push(`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`);
+
+// ── build DOM ──
+const wrap = document.createElement('div');
+wrap.className = 'grid-wrapper';
+
+// Time column
+const timeCol = document.createElement('div');
+timeCol.className = 'time-col';
+timeCol.style.height = (TOTAL_H + 32) + 'px';
+ticks.forEach(t => {
+  const el = document.createElement('div');
+  el.className = 'time-tick';
+  el.style.top  = (topPx(t) + 32) + 'px';
+  el.textContent = t;
+  timeCol.appendChild(el);
+});
+wrap.appendChild(timeCol);
+
+// Day columns
+const daysWrap = document.createElement('div');
+daysWrap.className = 'days-wrapper';
+
+days.forEach(day => {
+  const col = document.createElement('div');
+  col.className = 'day-col';
+
+  const hdr = document.createElement('div');
+  hdr.className = 'day-header';
+  hdr.textContent = day.name;
+  col.appendChild(hdr);
+
+  const body = document.createElement('div');
+  body.className = 'day-body';
+  body.style.height = TOTAL_H + 'px';
+
+  ticks.forEach((t, i) => {
+    const line = document.createElement('div');
+    line.className = 'gridline' + (i % 4 === 0 ? ' major' : '');
+    line.style.top = topPx(t) + 'px';
+    body.appendChild(line);
+  });
+
+  day.blocks.forEach(b => {
+    const el = document.createElement('div');
+    el.className = `block ${b.cls}`;
+    el.style.top    = topPx(b.s) + 'px';
+    el.style.height = heightPx(b.s, b.e) + 'px';
+
+    const nm = document.createElement('div');
+    nm.className = 'block-name';
+    nm.textContent = b.label;
+    el.appendChild(nm);
+
+    if (!b.ph) {
+      const tm = document.createElement('div');
+      tm.className = 'block-time';
+      tm.textContent = `${b.s}–${b.e}`;
+      el.appendChild(tm);
+    }
+    body.appendChild(el);
+  });
+
+  col.appendChild(body);
+  daysWrap.appendChild(col);
+});
+
+wrap.appendChild(daysWrap);
+document.getElementById('schedule').appendChild(wrap);
+
+// ── legend ──
+const legendDef = [
+  { cls:'c-andacht',         label:'Andacht' },
+  { cls:'c-wochenstart',     label:'Wochenstart' },
+  { cls:'c-nat',             label:'Natur & Technik' },
+  { cls:'c-info',            label:'NuT / Informatik' },
+  { cls:'c-math',            label:'Mathematik' },
+  { cls:'c-wahlfach',        label:'Wahlfach' },
+  { cls:'c-rzg',             label:'RZG' },
+  { cls:'c-deutsch',         label:'Deutsch' },
+  { cls:'c-franzoesisch',    label:'Französisch' },
+  { cls:'c-weltanschauung',  label:'Weltanschauung' },
+  { cls:'c-englisch',        label:'Englisch' },
+  { cls:'c-mittagspause',    label:'Mittagessen / Pause' },
+  { cls:'c-pause',           label:'Grosse Pause' },
+];
+const legend = document.getElementById('legend');
+legendDef.forEach(item => {
+  const li = document.createElement('div');
+  li.className = 'legend-item';
+  const sw = document.createElement('div');
+  sw.className = `legend-swatch ${item.cls}`;
+  const lb = document.createElement('span');
+  lb.textContent = item.label;
+  li.append(sw, lb);
+  legend.appendChild(li);
+});
+</script>
+</body>
+</html>
